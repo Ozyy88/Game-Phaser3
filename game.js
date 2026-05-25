@@ -87,7 +87,8 @@ function preload() {
     this.load.image('sky', 'assets/sky.svg');
     this.load.image('ground', 'assets/platform.svg');
     this.load.image('star', 'assets/star.svg');
-    this.load.image('player', 'assets/player.png');
+    this.load.spritesheet('player', 'assets/player_spritesheet_128.png', { frameWidth: 128, frameHeight: 128 });
+    this.load.audio('bgm', 'assets/bgm.wav');
 }
 
 function create() {
@@ -105,12 +106,50 @@ function create() {
     player = this.physics.add.sprite(100, 450, 'player');
     player.setBounce(0.2);
     player.setCollideWorldBounds(true);
+    player.setScale(0.5);
+    player.setSize(56,96).setOffset(36,16);
+
+    // Animations
+    this.anims.create({
+        key: 'idle',
+        frames: this.anims.generateFrameNumbers('player', { start: 0, end: 3 }),
+        frameRate: 6,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'run',
+        frames: this.anims.generateFrameNumbers('player', { start: 4, end: 9 }),
+        frameRate: 12,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'jump',
+        frames: this.anims.generateFrameNumbers('player', { start: 10, end: 11 }),
+        frameRate: 6,
+        repeat: -1
+    });
+
+    player.play('idle');
 
     
 
-    // Try to start background music immediately; keep a fallback to resume on user interaction
-    try { startBgm(); } catch (e) { }
-    this.input.once('pointerdown', () => { try { startBgm(); } catch (e) {} });
+    // Try to play loaded bgm via Phaser sound; fallback to WebAudio startBgm() if blocked
+    let bgm = null;
+    try {
+        bgm = this.sound.add('bgm', { loop: true, volume: 0.22 });
+        bgm.play();
+    } catch (e) {
+        try { startBgm(); } catch (e) {}
+    }
+    this.input.once('pointerdown', () => {
+        try {
+            if (bgm) {
+                if (!bgm.isPlaying) bgm.play();
+            } else {
+                startBgm();
+            }
+        } catch (e) { try { startBgm(); } catch (e) {} }
+    });
     
     // Stars
     stars = this.physics.add.group({
@@ -136,19 +175,26 @@ function create() {
 
 function update() {
     const cursors = this.input.keyboard.createCursorKeys();
-    
+    const onGround = player.body.touching.down;
+
     if (cursors.left.isDown) {
         player.setVelocityX(-160);
+        player.setFlipX(true);
+        if (onGround) player.play('run', true);
     }
     else if (cursors.right.isDown) {
         player.setVelocityX(160);
+        player.setFlipX(false);
+        if (onGround) player.play('run', true);
     }
     else {
         player.setVelocityX(0);
+        if (onGround) player.play('idle', true);
     }
-    
-    if (cursors.up.isDown && player.body.touching.down) {
+
+    if (cursors.up.isDown && onGround) {
         player.setVelocityY(-330);
+        player.play('jump');
     }
 }
 
