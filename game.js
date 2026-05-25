@@ -108,12 +108,9 @@ function create() {
 
     
 
-    // Prompt user to start audio (most browsers require user gesture)
-    const playText = this.add.text(400, 30, 'Klik layar untuk memulai musik', { fontSize: '18px', fill: '#000' }).setOrigin(0.5);
-    this.input.once('pointerdown', () => {
-        startBgm();
-        playText.setVisible(false);
-    });
+    // Try to start background music immediately; keep a fallback to resume on user interaction
+    try { startBgm(); } catch (e) { }
+    this.input.once('pointerdown', () => { try { startBgm(); } catch (e) {} });
     
     // Stars
     stars = this.physics.add.group({
